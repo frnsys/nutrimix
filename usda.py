@@ -24,6 +24,7 @@ NUTRI_NAMES = {
     '323': 'vitamin e',
     '573': 'vitamin e',
     '435': 'folate', # vitamin B9, DFE
+    '417': 'folate', # vitamin B9, DFE
     '305': 'phosphorus',
     '304': 'magnesium',
     '317': 'selenium',
@@ -106,6 +107,7 @@ def lookup_nutrition(id):
 
 
 def parse_nutrition(data):
+    logger.debug('parsing {}'.format(data['name']))
     nutrients = {}
     required = list(NUTRI_NAMES.keys())
     for n in data['nutrients']:
@@ -135,11 +137,12 @@ def parse_nutrition(data):
     # assume non-specified nutrients are 0
     for id in required:
         name = NUTRI_NAMES[id]
-        std_unit = STANDARD_UNITS[name]
-        nutrients[name] = {
-            'value': 0,
-            'unit': std_unit
-        }
+        if name not in nutrients:
+            std_unit = STANDARD_UNITS[name]
+            nutrients[name] = {
+                'value': 0,
+                'unit': std_unit
+            }
 
     # measurement conversions seem to be identical
     # for all nutrients
@@ -147,6 +150,7 @@ def parse_nutrition(data):
     for m in data['nutrients'][0]['measures']:
         c = [(m['eqv'], m['eunit']), (m['qty'], m['label'])]
         conversions.append(c)
+
     return {
         'id': data['ndbno'],
         'name': data['name'],

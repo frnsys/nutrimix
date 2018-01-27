@@ -1,5 +1,6 @@
 import yaml
 import numpy as np
+from util import sum_quantity_key
 from scipy.optimize import minimize
 from usda import lookup_nutrition, STANDARD_UNITS
 
@@ -7,6 +8,7 @@ from usda import lookup_nutrition, STANDARD_UNITS
 # based on nutrition of OPTIFAST 800 shake mix
 # in the relevant nutrient's standard units
 CON_NUTRI = {
+    'energy': (300, None),
     'fiber': (3, None),
     'protein': (16, None),
     'iron': (3, None),
@@ -47,23 +49,12 @@ with open('ingredients.yaml', 'w') as f:
 
 def objective(x):
     """objective is to minimize cost"""
-    return sum_quantity_key(x, 'cost')
+    return sum_quantity_key(ingredients, x, 'cost')
 
 
 def mass_constraint(x):
     return MAX_MASS - sum(x)
 
-
-def sum_quantity_key(x, key):
-    """sum specified values of a list of dicts"""
-    return sum(q * parse_key(ingredients[i], key) for i, q in enumerate(x))
-
-
-def parse_key(d, key):
-    """access sub-keys of a dict w/ e.g. 'foo.bar.baz'"""
-    for k in key.split('.'):
-        d = d[k]
-    return d
 
 
 if __name__ == '__main__':
@@ -79,12 +70,12 @@ if __name__ == '__main__':
         if l is not None:
             nutri_constraints.append({
                 'type': 'ineq',
-                'fun': lambda x, l=l: sum_quantity_key(x, 'nutrients.{}.value'.format(k)) - l
+                'fun': lambda x, l=l: sum_quantity_key(ingredients, x, 'nutrients.{}.value'.format(k)) - l
             })
         if u is not None:
             nutri_constraints.append({
                 'type': 'ineq',
-                'fun': lambda x, u=u: u - sum_quantity_key(x, 'nutrients.{}.value'.format(k))
+                'fun': lambda x, u=u: u - sum_quantity_key(ingredients, x, 'nutrients.{}.value'.format(k))
             })
 
     # optimize
@@ -101,9 +92,9 @@ if __name__ == '__main__':
 
     print('--nutritional content--')
     for k, v in CON_NUTRI.items():
-        amt = sum_quantity_key(mix, 'nutrients.{}.value'.format(k))
+        amt = sum_quantity_key(ingredients, mix, 'nutrients.{}.value'.format(k))
         off_by = amt - v[0]
         off_by = '{}{:.2f}{}'.format('+' if off_by > 0 else '', off_by, STANDARD_UNITS[k])
         print('{: >20} {: >8} {: <8}'.format(k, '{:.2f}{}'.format(amt, STANDARD_UNITS[k]), off_by))
 
-    print('total cost: ${:.2f}'.format(sum_quantity_key(mix, 'cost')))
+    print('total cost: ${:.2f}'.format(sum_quantity_key(ingredients, mix, 'cost')))
